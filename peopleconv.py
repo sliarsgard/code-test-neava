@@ -1,6 +1,7 @@
 import argparse
 import os
 
+# A dictionary that contains the allowed children for each tag
 allowed_map = {
     'person': ['T', 'A', 'F'],
     'family': ['T', 'A'],
@@ -9,6 +10,7 @@ allowed_map = {
     'phone': [],
 }
 
+# Maps the tag to the XML tag
 tag_map = {
     'P': 'person',
     'T': 'phone',
@@ -16,6 +18,7 @@ tag_map = {
     'F': 'family',
 }
 
+# Maps the tag to the data fields
 field_map = {
     'P': ['firstname', 'lastname'],
     'T': ['mobile', 'landline'],
@@ -28,7 +31,9 @@ def convert_people_file(filepath, output, force=False):
         print(f'Output file already exists: {output}! Use --force to overwrite')
         return
     
+    # The file will always start with a <people> tag
     xml_lines = ['<people>']
+    # Stack keeps track of the current open tags
     stack = ['people']
     
     try:
@@ -44,8 +49,11 @@ def convert_people_file(filepath, output, force=False):
                 if line_key not in tag_map.keys():
                     raise ValueError(f'Unexpected start of line: {line_key}')
                 
+                # Close tags until the current tag is allowed
                 while stack and line_key not in allowed_map[stack[-1]]:
                     xml_lines.append(f'</{stack.pop()}>')
+                    
+                # If the stack is empty, the file is invalid (eg. a phone number without a person)
                 if not stack:
                     raise ValueError(f'Unexpected start of line: {line_key}')
                 
@@ -56,10 +64,12 @@ def convert_people_file(filepath, output, force=False):
                 for i, field in enumerate(field_map[line_key], start=1):
                     if len(line_data) > i:
                         xml_lines.append(f'<{field}>{line_data[i].strip()}</{field}>')
-                
+           
+        # Close all open tags
         while stack:
             xml_lines.append(f'</{stack.pop()}>')
         
+        # Write the XML to the output file
         with open(output, 'w') as file:
             file.write('\n'.join(xml_lines))
             file.write('\n')
